@@ -53,7 +53,7 @@ module Grabby
     attr_accessor :enabled
 
     def debug(message)
-      puts "\033[33m#{message}\033[0m"
+      puts "\033[33m[grabby]\033[0m #{message}"
     end
 
     #
@@ -63,11 +63,13 @@ module Grabby
     def after_filter(controller)
       return unless @enabled
 
+      @error_count ||= 0
       @rules ||= {}
 
       if(controller.params[:grabby_start])
         discovery_session.stop if discovery_session
         @discovery_session = NewRelic::Grabby::DiscoverySession.new
+        debug "Started discovery session"
       end
 
       if(controller.params[:grabby_stop] && @discovery_session)
@@ -80,6 +82,15 @@ module Grabby
       end
 
       capture_custom_params(controller)
+    rescue => e
+      debug "Error in controller filter: #{e.message}"
+      debug e.backgtrace.join("\n")
+      @error_count += 1
+
+      if @error_count > 5
+        debug "Disabling Grabby due to excessive error count"
+        @enabled = false
+      end
     end
 
     def update_rules(rules)
@@ -164,21 +175,23 @@ module Grabby
 
   end
 
-  # listen to changes of agent configuration and update grabby's configuration
-  # (or turn on/off)
   NewRelic::Agent.config.register_callback(:grabby) do |config|
+    Grabby.debug "Config: #{config}"
+
     # FIXME think about thread safety
-    NewRelic::Grabby.enabled = config['enabled'] if config
+    Grabby.enabled = config['enabled'] if config
+
+    Grabby.debug "To turn on grabby, set grabby: enabled: true in newrelic.yml" if !Grabby.enabled
   end
 
   NewRelic::Agent.config.register_callback(:'grabby.rules') do |rules|
-    NewRelic::Grabby.debug "Grabby Configuration Rules: #{rules}"
+    Grabby.debug "Configuration Rules: #{rules}"
 
     # FIXME think about thread safety.
-    enabled = NewRelic::Grabby.enabled
-    NewRelic::Grabby.enabled = false
-    NewRelic::Grabby.update_rules(rules || [])
-    NewRelic::Grabby.enabled = enabled
+    enabled = Grabby.enabled
+    Grabby.enabled = false
+    Grabby.update_rules(rules || [])
+    Grabby.enabled = enabled
   end
 
 end

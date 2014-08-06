@@ -9,6 +9,14 @@ v2 or later.
 
 For more details, check out this quip doc: https://quip.com/tA39AH7cM8fK
 
+Install the gem. 
 ```
-gem 'newrelic_grabby'
+gem 'newrelic_grabby', git: https://source.datanerd.us/cirne/grabby-gem
+```
+
+In NewRelic.yml, you need to explicitly turn on grabby for your desired environment (development, prod, etc)
+
+```yaml
+  grabby:
+    enabled: true
 ```

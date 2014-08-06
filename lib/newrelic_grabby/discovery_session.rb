@@ -97,7 +97,8 @@ module NewRelic::Grabby
           event[:attribute] = strip_at(attribute) if attribute
 
           @sent_attributes[key] = value
-          Grabby.send_analytic_event('AppAttribute', event)
+          ::NewRelic::Grabby.debug("discovered attribute: #{name}")
+          ::NewRelic::Grabby.send_analytic_event('AppAttribute', event)
         end
       end
     end
@@ -139,18 +140,36 @@ module NewRelic::Grabby
       end
     end
 
-    # don't report the same data more than once per session (per process)
+    # even though we mask out most of the contents of a given sample
+    # value, there are some attributes that we don't even want
+    # to report for consideration.
+    FORBIDDEN_NAMES = [
+        /password/i,
+        /passwd/i,
+        /ssn/i,
+        /social.*security/i,
+        /salt/i,
+        /crypt/i,
+        /credit_card/i
+    ]
+
+    # don't report the same data more than once per session (per process).
     # if it should report, return a key that can be used in a cache of
     # reported attributes
     def should_report(instance_var, attribute)
       tname = NewRelic::Agent.get_transaction_name
       return false unless tname
 
+
       key = "#{tname}::#{instance_var}"
       key << "::#{attribute}" if attribute
 
       if @sent_attributes[key]
         return nil
+      end
+
+      FORBIDDEN_NAMES.each do |forbidden_name|
+        return false if forbidden_name.match(instance_var) || forbidden_name.match(attribute)
       end
 
       key
