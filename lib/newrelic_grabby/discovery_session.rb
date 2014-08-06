@@ -140,19 +140,6 @@ module NewRelic::Grabby
       end
     end
 
-    # even though we mask out most of the contents of a given sample
-    # value, there are some attributes that we don't even want
-    # to report for consideration.
-    FORBIDDEN_NAMES = [
-        /password/i,
-        /passwd/i,
-        /ssn/i,
-        /social.*security/i,
-        /salt/i,
-        /crypt/i,
-        /credit_card/i
-    ]
-
     # don't report the same data more than once per session (per process).
     # if it should report, return a key that can be used in a cache of
     # reported attributes
@@ -168,9 +155,8 @@ module NewRelic::Grabby
         return nil
       end
 
-      FORBIDDEN_NAMES.each do |forbidden_name|
-        return false if forbidden_name.match(instance_var) || forbidden_name.match(attribute)
-      end
+      return false if NewRelic::Grabby.is_sensitive?(instance_var) ||
+          NewRelic::Grabby.is_sensitive?(attribute)
 
       key
     end

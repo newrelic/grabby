@@ -47,153 +47,181 @@ require "newrelic_grabby/discovery_session"
 # attribute as "user_name"
 #
 module NewRelic
-module Grabby
-  class << self
-    attr_reader :discovery_session, :rules
-    attr_accessor :enabled
+  module Grabby
+    class << self
+      attr_reader :discovery_session, :rules
+      attr_accessor :enabled
 
-    def debug(message)
-      puts "\033[33m[grabby]\033[0m #{message}"
-    end
-
-    #
-    # this is the main entry point for Grabby, invoked after a controller
-    # action has executed (but before rendering content).
-    #
-    def after_filter(controller)
-      return unless @enabled
-
-      @error_count ||= 0
-      @rules ||= {}
-
-      if(controller.params[:grabby_start])
-        discovery_session.stop if discovery_session
-        @discovery_session = NewRelic::Grabby::DiscoverySession.new
-        debug "Started discovery session"
+      def debug(message)
+        puts "\033[33m[grabby]\033[0m #{message}"
       end
 
-      if(controller.params[:grabby_stop] && @discovery_session)
-        discovery_session.stop
-        @discovery_session = nil
-      end
+      #
+      # this is the main entry point for Grabby, invoked after a controller
+      # action has executed (but before rendering content).
+      #
+      def after_filter(controller)
+        return unless @enabled
 
-      if discovery_session && discovery_session.is_running?
-        discovery_session.inspect_controller(controller)
-      end
+        @error_count ||= 0
+        @rules ||= {}
 
-      capture_custom_params(controller)
-    rescue => e
-      debug "Error in controller filter: #{e.message}"
-      debug e.backgtrace.join("\n")
-      @error_count += 1
+        if(controller.params[:grabby_start])
+          discovery_session.stop if discovery_session
+          @discovery_session = NewRelic::Grabby::DiscoverySession.new
+          debug "Started discovery session"
+        end
 
-      if @error_count > 5
-        debug "Disabling Grabby due to excessive error count"
-        @enabled = false
-      end
-    end
+        if(controller.params[:grabby_stop] && @discovery_session)
+          discovery_session.stop
+          @discovery_session = nil
+        end
 
-    def update_rules(rules)
-      @rules = {}
-      (rules || []).each do |rule|
-        add_rule rule['variable_name'], rule['attribute_name'], rule['reporting_name']
-      end
-    end
+        if discovery_session && discovery_session.is_running?
+          discovery_session.inspect_controller(controller)
+        end
 
-    #
-    # THIS IS A TOTAL HACK until we have true custom event support
-    # in the agent protocol, get undocumented access to the
-    # New Relic Agent's request sampler, which will gather and
-    # harvest Transaction events (yuck).
-    #
-    # At least they show up as the specified eventType, and not
-    # as Transaction events.
-    def send_analytic_event(eventType, event)
-      agent = NewRelic::Agent.instance
-      request_sampler = agent.instance_variable_get(:@request_sampler)
-      event = [{type: eventType}, event]
+        capture_custom_params(controller)
+      rescue => e
+        debug "Error in controller filter: #{e.message}"
+        debug e.backgtrace.join("\n")
+        @error_count += 1
 
-      request_sampler.synchronize do
-        samples = request_sampler.instance_variable_get(:@samples)
-        samples.append(event)
-      end
-    end
-
-    private
-
-    # we store rules in a hash of hashes to reduce the number of times
-    # we have to grab an attribute from a controller action via
-    # introspection.
-    # @rules = {
-    #     #{instance_variable_name}: {
-    #       #{attribute_name}: #{reported_name},
-    #        ...
-    #     },
-    #     ...
-    # }
-    def add_rule(instance_variable, attribute, name = nil)
-      # determine a default name if none is specified
-      if name.nil?
-        name = instance_variable
-        name += "_" + attribute if attribute
-      end
-
-      rules[instance_variable] ||= {}
-      rules[instance_variable][attribute] = name
-    end
-
-    # based on the configuration rules, capture parameter values
-    # and report them as custom attributes
-    def capture_custom_params(controller)
-      params = {}
-
-      rules.each do |attribute, values|
-        instance_var = controller.instance_variable_get("@#{attribute}")
-        if instance_var
-          values.each do |attr, name|
-            value = nil
-            if attr == nil
-              value = instance_var
-            elsif instance_var.respond_to? :attributes
-              attributes = instance_var.attributes      # on the off chance this isn't a Hash
-              value = attributes[attr] if attributes.is_a?(Hash)
-            else
-              value = instance_var.instance_variable_get("@#{attr}")
-            end
-
-            # only capture Strings or Numbers.  (nil is neither)
-            if value.is_a?(String) || value.is_a?(Numeric)
-              params[name] = value
-            end
-          end
+        if @error_count > 5
+          debug "Disabling Grabby due to excessive error count"
+          @enabled = false
         end
       end
 
-      debug "capturing: #{params}" unless params.empty?
-      NewRelic::Agent.add_custom_parameters(params) unless params.empty?
+      def update_rules(rules)
+        @rules = {}
+        (rules || []).each do |rule|
+          add_rule rule['variable_name'], rule['attribute_name'], rule['reporting_name']
+        end
+      end
+
+      #
+      # THIS IS A TOTAL HACK until we have true custom event support
+      # in the agent protocol, get undocumented access to the
+      # New Relic Agent's request sampler, which will gather and
+      # harvest Transaction events (yuck).
+      #
+      # At least they show up as the specified eventType, and not
+      # as Transaction events.
+      def send_analytic_event(eventType, event)
+        agent = NewRelic::Agent.instance
+        request_sampler = agent.instance_variable_get(:@request_sampler)
+        event = [{type: eventType}, event]
+
+        request_sampler.synchronize do
+          samples = request_sampler.instance_variable_get(:@samples)
+          samples.append(event)
+        end
+      end
+
+      private
+
+      # we store rules in a hash of hashes to reduce the number of times
+      # we have to grab an attribute from a controller action via
+      # introspection.
+      # @rules = {
+      #     #{instance_variable_name}: {
+      #       #{attribute_name}: #{reported_name},
+      #        ...
+      #     },
+      #     ...
+      # }
+      def add_rule(instance_variable, attribute, name = nil)
+        if is_sensitive?(instance_variable) || is_sensitive?(attribute)
+          debug("will not collect #{instance_variable}_#{attribute}: this is potentially sensitive data")
+          return
+        end
+
+        # determine a default name if none is specified
+        if name.nil?
+          name = instance_variable
+          name += "_" + attribute if attribute
+        end
+
+        rules[instance_variable] ||= {}
+        rules[instance_variable][attribute] = name
+      end
+
+      # based on the configuration rules, capture parameter values
+      # and report them as custom attributes
+      def capture_custom_params(controller)
+        params = {}
+
+        rules.each do |attribute, values|
+          instance_var = controller.instance_variable_get("@#{attribute}")
+          if instance_var
+            values.each do |attr, name|
+              value = nil
+              if attr == nil
+                value = instance_var
+              elsif instance_var.respond_to? :attributes
+                attributes = instance_var.attributes      # on the off chance this isn't a Hash
+                value = attributes[attr] if attributes.is_a?(Hash)
+              else
+                value = instance_var.instance_variable_get("@#{attr}")
+              end
+
+              # only capture Strings or Numbers.  (nil is neither)
+              if value.is_a?(String) || value.is_a?(Numeric)
+                params[name] = value
+              end
+            end
+          end
+        end
+
+        debug "capturing: #{params}" unless params.empty?
+        NewRelic::Agent.add_custom_parameters(params) unless params.empty?
+      end
+
+      # even though we mask out most of the contents of a given sample
+      # value, there are some attributes that we don't even want
+      # to report for consideration.
+      FORBIDDEN_NAMES = [
+          /password/i,
+          /passwd/i,
+          /ssn/i,
+          /secret/i,
+          /social.*security/i,
+          /salt/i,
+          /crypt/i,
+          /credit_card/i
+      ]
+      def is_sensitive?(name)
+        FORBIDDEN_NAMES.each do |forbidden|
+          return true if forbidden.match(name)
+        end
+
+        false
+      end
+    end
+
+    NewRelic::Agent.config.register_callback(:grabby) do |config|
+      Grabby.enabled = config['enabled'] if config
+
+      if Grabby.enabled
+        Grabby.debug "Grabby disabled."
+      else
+        Grabby.debug "Grabby enabled."
+      end
+    end
+
+    NewRelic::Agent.config.register_callback(:'grabby.rules') do |rules|
+      if rules && !rules.empty?
+        Grabby.debug "Received configuration: #{rules}"
+      end
+
+      # FIXME think about thread safety.
+      enabled = Grabby.enabled
+      Grabby.enabled = false
+      Grabby.update_rules(rules || [])
+      Grabby.enabled = enabled
     end
 
   end
-
-  NewRelic::Agent.config.register_callback(:grabby) do |config|
-    Grabby.debug "Config: #{config}"
-
-    # FIXME think about thread safety
-    Grabby.enabled = config['enabled'] if config
-
-    Grabby.debug "To turn on grabby, set grabby: enabled: true in newrelic.yml" if !Grabby.enabled
-  end
-
-  NewRelic::Agent.config.register_callback(:'grabby.rules') do |rules|
-    Grabby.debug "Configuration Rules: #{rules}"
-
-    # FIXME think about thread safety.
-    enabled = Grabby.enabled
-    Grabby.enabled = false
-    Grabby.update_rules(rules || [])
-    Grabby.enabled = enabled
-  end
-
-end
 end
 
