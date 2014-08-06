@@ -11,7 +11,7 @@ For more details, check out this quip doc: https://quip.com/tA39AH7cM8fK
 
 Install the gem. 
 ```
-gem 'newrelic_grabby', git: 'https://source.datanerd.us/cirne/grabby-gem'
+gem 'newrelic_grabby', git: 'git@source.datanerd.us:cirne/grabby-gem.git'
 ```
 
 In your rails app's <conde>config/newrelic.yml</code>, you will need to explicitly turn on 

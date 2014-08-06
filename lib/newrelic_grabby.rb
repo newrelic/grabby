@@ -84,7 +84,7 @@ module NewRelic
         capture_custom_params(controller)
       rescue => e
         debug "Error in controller filter: #{e.message}"
-        debug e.backgtrace.join("\n")
+        debug e.backtrace.join("\n")
         @error_count += 1
 
         if @error_count > 5
@@ -117,6 +117,14 @@ module NewRelic
           samples = request_sampler.instance_variable_get(:@samples)
           samples.append(event)
         end
+      end
+
+      def is_sensitive?(name)
+        FORBIDDEN_NAMES.each do |forbidden|
+          return true if forbidden.match(name)
+        end
+
+        false
       end
 
       private
@@ -191,13 +199,6 @@ module NewRelic
           /crypt/i,
           /credit_card/i
       ]
-      def is_sensitive?(name)
-        FORBIDDEN_NAMES.each do |forbidden|
-          return true if forbidden.match(name)
-        end
-
-        false
-      end
     end
 
     NewRelic::Agent.config.register_callback(:grabby) do |config|
