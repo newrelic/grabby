@@ -1,29 +1,14 @@
-# NewrelicGrabby
+# Grabby
 
-TODO: Write a gem description
+Grabby is an early prototype that automatically discovers postential custom attributes to be reported
+into New Relic Insights.  You then specify which attributes you want to collect, and then Grabby will report
+them.
 
-## Installation
+Grabby depends on a recent version of the New Relic Agent (3.9.1 or later) and any Rails application
+v2 or later.
 
-Add this line to your application's Gemfile:
+For more details, check out this quip doc: https://quip.com/tA39AH7cM8fK
 
-    gem 'newrelic_grabby'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install newrelic_grabby
-
-## Usage
-
-TODO: Write usage instructions here
-
-## Contributing
-
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+```
+gem 'newrelic_grabby'
+```
