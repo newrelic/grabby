@@ -195,6 +195,8 @@ module NewRelic
           /ssn/i,
           /secret/i,
           /social.*security/i,
+          /token/i,
+          /auth/i,
           /salt/i,
           /crypt/i,
           /credit_card/i
