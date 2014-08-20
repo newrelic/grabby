@@ -13,7 +13,7 @@
 #
 module NewRelic::Grabby
   class DiscoverySession
-    DEFAULT_DURATION = 1.hour
+    DEFAULT_DURATION = 3600           # 1 hour.  In some environments 1.hour undefined.
     DEFAULT_ATTRIBUTE_LIMIT = 100_000
 
     attr_reader :sent_attributes
@@ -85,12 +85,14 @@ module NewRelic::Grabby
       if(key = should_report(instance_var, attribute))
         value = scrub(value || object)
         name = suggested_name(instance_var, attribute)
+        dev_name = developer_name(instance_var, attribute)
 
         if value
           event = {
               controller: NewRelic::Agent.get_transaction_name,
               instance_variable: strip_at(instance_var),
               suggested_name: name,
+              developer_name: dev_name,
               session_id: guid,
               sample_value: value
           }
@@ -113,6 +115,12 @@ module NewRelic::Grabby
     def suggested_name(instance_var, attribute)
       name = strip_at(instance_var)
       name << "_" + strip_at(attribute) if attribute
+      name
+    end
+
+    def developer_name(instance_var, attribute)
+      name = instance_var.to_s
+      name << "." + strip_at(attribute) if attribute
       name
     end
 
