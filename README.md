@@ -10,8 +10,6 @@ whether this will ultimately become a shipping, supported feature.
 Grabby depends on a recent version of the New Relic Agent (3.9.1 or later) and any Rails application
 v2 or later.
 
-For more details, check out this quip doc: https://quip.com/tA39AH7cM8fK
-
 Install the gem. 
 ```
 gem 'newrelic_grabby', git: 'git@github.com:newrelic/grabby.git'
