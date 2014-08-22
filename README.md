@@ -4,6 +4,9 @@ Grabby is an early prototype that automatically discovers postential custom attr
 into New Relic Insights.  You then specify which attributes you want to collect, and then Grabby will report
 them.
 
+Grabby is available only to a handful of adventurous New Relic customers as an early prototype.  It is unclear
+whether this will ultimately become a shipping, supported feature.
+
 Grabby depends on a recent version of the New Relic Agent (3.9.1 or later) and any Rails application
 v2 or later.
 
@@ -11,7 +14,7 @@ For more details, check out this quip doc: https://quip.com/tA39AH7cM8fK
 
 Install the gem. 
 ```
-gem 'newrelic_grabby', git: 'git@source.datanerd.us:cirne/grabby-gem.git'
+gem 'newrelic_grabby', git: 'git@github.com:newrelic/Grabby.git'
 ```
 
 In your rails app's <conde>config/newrelic.yml</code>, you will need to explicitly turn on 
