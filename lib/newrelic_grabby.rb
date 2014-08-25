@@ -203,13 +203,13 @@ module NewRelic
       ]
     end
 
-    NewRelic::Agent.config.register_callback(:grabby) do |config|
-      Grabby.enabled = config['enabled'] if config
+    NewRelic::Agent.config.register_callback(:'grabby.enabled') do |value|
+      Grabby.enabled = value
 
       if Grabby.enabled
-        Grabby.debug "Grabby disabled."
-      else
         Grabby.debug "Grabby enabled."
+      else
+        Grabby.debug "Grabby disabled."
       end
     end
 

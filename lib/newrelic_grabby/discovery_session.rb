@@ -138,7 +138,7 @@ module NewRelic::Grabby
 
         # trim to a reasonable length
         if scrubbed.length > 70
-          srubbed = scrubbed[0..66]+'...'
+          scrubbed = scrubbed[0..66]+'...'
         end
         return scrubbed
       elsif value.is_a? Numeric
