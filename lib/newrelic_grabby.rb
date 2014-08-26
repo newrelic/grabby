@@ -94,10 +94,16 @@ module NewRelic
       end
 
       def update_rules(rules)
-        @rules = {}
+        # Since other threads might be iterating over @rules, we'll update by
+        # building a new_rules hash, then swapping that one in once it's
+        # complete.
+        new_rules = {}
+
         (rules || []).each do |rule|
-          add_rule rule['variable_name'], rule['attribute_name'], rule['reporting_name']
+          add_rule new_rules, rule['variable_name'], rule['attribute_name'], rule['reporting_name']
         end
+
+        @rules = new_rules
       end
 
       #
@@ -139,7 +145,7 @@ module NewRelic
       #     },
       #     ...
       # }
-      def add_rule(instance_variable, attribute, name = nil)
+      def add_rule(new_rules, instance_variable, attribute, name = nil)
         if is_sensitive?(instance_variable) || is_sensitive?(attribute)
           debug("will not collect #{instance_variable}_#{attribute}: this is potentially sensitive data")
           return
@@ -151,8 +157,8 @@ module NewRelic
           name += "_" + attribute if attribute
         end
 
-        rules[instance_variable] ||= {}
-        rules[instance_variable][attribute] = name
+        new_rules[instance_variable] ||= {}
+        new_rules[instance_variable][attribute] = name
       end
 
       # based on the configuration rules, capture parameter values
@@ -218,11 +224,7 @@ module NewRelic
         Grabby.debug "Received configuration: #{rules}"
       end
 
-      # FIXME think about thread safety.
-      enabled = Grabby.enabled
-      Grabby.enabled = false
       Grabby.update_rules(rules || [])
-      Grabby.enabled = enabled
     end
 
   end
