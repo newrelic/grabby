@@ -67,9 +67,12 @@ module NewRelic
         @rules ||= {}
 
         if(controller.params[:grabby_start])
-          discovery_session.stop if discovery_session
-          @discovery_session = NewRelic::Grabby::DiscoverySession.new
-          debug "Started discovery session"
+          if discovery_session
+            debug "Discovery session already in progress; not starting a new one."
+          else
+            @discovery_session = NewRelic::Grabby::DiscoverySession.new
+            debug "Started discovery session"
+          end
         end
 
         if(controller.params[:grabby_stop] && @discovery_session)
