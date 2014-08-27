@@ -53,7 +53,7 @@ module NewRelic
       attr_accessor :enabled
 
       def debug(message)
-        puts "\033[33m[grabby]\033[0m #{message}"
+        ::NewRelic::Agent.logger.info("[grabby] #{message}")
       end
 
       #
@@ -69,7 +69,6 @@ module NewRelic
         if(controller.params[:grabby_start])
           discovery_session.stop if discovery_session
           @discovery_session = NewRelic::Grabby::DiscoverySession.new
-          debug "Started discovery session"
         end
 
         if(controller.params[:grabby_stop] && @discovery_session)

@@ -26,6 +26,7 @@ module NewRelic::Grabby
       @guid = SecureRandom.uuid
       @duration = duration
       @attribute_limit = attribute_limit
+      ::NewRelic::Grabby.debug "Started discovery session (duration: #{duration}s)"
     end
 
     def is_running?
@@ -35,6 +36,7 @@ module NewRelic::Grabby
     def stop
       @is_running = false
       @sent_attributes = {}
+      ::NewRelic::Grabby.debug "Stopped discovery session"
     end
 
     def inspect_controller(controller)
