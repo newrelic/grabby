@@ -131,8 +131,10 @@ module NewRelic::Grabby
     # if the value isn't a string or a number, it shouldn't be sent (return nil)
     def scrub(value)
       if value.is_a? String
-        chars_to_keep = [value.length / 2, 10].min
-        scrubbed = value[0..chars_to_keep / 2-1]
+        chars_to_keep = [1 + value.length / 2, 10].min
+        return value if chars_to_keep >= value.length
+
+        scrubbed = value[0...chars_to_keep / 2]
         scrubbed << '*' * (value.length - chars_to_keep)
         scrubbed << value[-1*(value.length - scrubbed.length)..-1]
 
