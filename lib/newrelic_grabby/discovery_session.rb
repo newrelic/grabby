@@ -21,6 +21,7 @@ module NewRelic::Grabby
 
     def initialize(duration = DEFAULT_DURATION, attribute_limit = DEFAULT_ATTRIBUTE_LIMIT)
       @sent_attributes = {}
+      @mutex = Mutex.new # to protect writing to @sent_attributes
       @is_running = true
       @start_time = Time.now
       @guid = SecureRandom.uuid
@@ -98,7 +99,10 @@ module NewRelic::Grabby
           }
           event[:attribute] = strip_at(attribute) if attribute
 
-          @sent_attributes[key] = value
+          @mutex.synchronize do
+            @sent_attributes[key] = value
+          end
+
           ::NewRelic::Grabby.debug("discovered attribute: #{name}")
           ::NewRelic::Grabby.send_analytic_event('AppAttribute', event)
         end
