@@ -30,7 +30,8 @@ You will need to turn on a discovery session to have Capture report possible att
 To do this, add <code>?grabby_start=true</code> to your url params.  This is a short term hack.  
 
 Whichever process receives this http request will start discovering instance variables and their attributes.  
-For details on how this works, go to the quip doc here:
+
+Now, you'll need an NR Admin to turn on server-side config for the application that is reporting. 
 
 After exercising your app, go to insights: <code>/accounts/:account_id/auto_instrument</code> to see the 
 attributes you can collect from your app's agents.  Select which ones you want to collect.
